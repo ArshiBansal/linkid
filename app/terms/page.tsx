@@ -165,8 +165,8 @@ export default function TermsOfServicePage() {
                         1. Introduction
                       </h2>
                       <p>
-                        Welcome to <strong>LinkID</strong> ("we," "our," or
-                        "us"). By accessing or using our platform at{" "}
+                        Welcome to <strong>LinkID</strong> (<em>we</em>, <em>our</em>, or
+                        <em>us</em>). By accessing or using our platform at{" "}
                         <Link
                           href="/"
                           className="text-violet-600 hover:underline dark:text-violet-400"
@@ -388,7 +388,7 @@ export default function TermsOfServicePage() {
                       </InfoCard>
                       <div className="rounded-xl border border-zinc-200/70 bg-zinc-50/70 px-5 py-5 text-sm leading-7 italic dark:border-zinc-700 dark:bg-zinc-900/40">
                         <strong>Disclaimer of Warranties:</strong> LinkID is
-                        provided "AS IS" and "AS AVAILABLE" without warranties
+                        provided <em>AS IS</em> and <em>AS AVAILABLE</em> without warranties
                         of any kind, express or implied.
                       </div>
                     </section>
