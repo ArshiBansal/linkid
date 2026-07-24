@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { ProfileCard } from "./ProfileCard";
 import { ProfileFooter } from "./ProfileFooter";
 import { resolveUserByUsername } from "@/lib/userLookup";
+import { ShareProfileButton } from "./ShareProfileButton";
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
     try {
@@ -111,7 +112,8 @@ export default async function PublicProfile({
   });
 
   return (
-    <main className={`min-h-screen px-4 py-16 theme-${user.theme || "default"}`}>
+    <main className={`min-h-screen relative px-4 py-16 theme-${user.theme || "default"}`}>
+      <ShareProfileButton />
       <div className="mx-auto max-w-md">
         <ProfileCard
           user={{
