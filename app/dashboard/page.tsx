@@ -25,6 +25,8 @@ export default async function DashboardPage() {
             username={user.username}
             initialLinks={user.links}
             initialTheme={user.theme}
+            initialSeoTitle={user.seoTitle || ""}
+            initialSeoDescription={user.seoDescription || ""}
             qrCode={<QRCode />} 
             enableEmailCapture={user.enableEmailCapture}
             subscribers={user.subscribers}

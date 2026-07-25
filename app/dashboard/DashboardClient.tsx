@@ -9,11 +9,14 @@ import { LinkIdCard } from "./LinkIdCard";
 import { AnalyticsOverview } from "./AnalyticsOverview";
 import { VersionHistory } from "@/components/dashboard/VersionHistory";
 import { AppearanceSection } from "./AppearanceSection";
+import { SeoSection } from "./SeoSection";
 
 export default function DashboardClient({
     username,
     initialLinks,
     initialTheme,
+    initialSeoTitle,
+    initialSeoDescription,
     qrCode,
     enableEmailCapture,
     subscribers = [],
@@ -21,13 +24,17 @@ export default function DashboardClient({
     username: string;
     initialLinks: ProfileLink[];
     initialTheme?: string;
+    initialSeoTitle?: string;
+    initialSeoDescription?: string;
     qrCode?: React.ReactNode;
     enableEmailCapture?: boolean;
     subscribers?: { id: string; email: string; createdAt: Date }[];
 }) {
     const [links, setLinks] = useState(initialLinks);
     const [theme, setTheme] = useState(initialTheme || "default");
-    const [activeTab, setActiveTab] = useState<"links" | "appearance">("links");
+    const [seoTitle, setSeoTitle] = useState(initialSeoTitle || "");
+    const [seoDescription, setSeoDescription] = useState(initialSeoDescription || "");
+    const [activeTab, setActiveTab] = useState<"links" | "appearance" | "seo">("links");
     const [showAdd, setShowAdd] = useState(false);
     const [isEmailCaptureEnabled, setIsEmailCaptureEnabled] = useState(enableEmailCapture ?? false);
     const [isPendingEmailCapture, setIsPendingEmailCapture] = useState(false);
@@ -213,6 +220,12 @@ export default function DashboardClient({
                     >
                         Appearance
                     </button>
+                    <button 
+                        className={`pb-2 px-1 text-sm font-medium ${activeTab === 'seo' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => setActiveTab('seo')}
+                    >
+                        SEO
+                    </button>
                 </div>
 
                 {activeTab === 'links' ? (
@@ -275,10 +288,19 @@ export default function DashboardClient({
                             onReorder={setLinks}
                         />
                     </div>
-                ) : (
+                ) : activeTab === 'appearance' ? (
                     <AppearanceSection 
                         initialTheme={theme} 
                         onUpdateTheme={setTheme} 
+                    />
+                ) : (
+                    <SeoSection 
+                        initialTitle={seoTitle}
+                        initialDescription={seoDescription}
+                        onUpdateSeo={(title, desc) => {
+                            setSeoTitle(title);
+                            setSeoDescription(desc);
+                        }}
                     />
                 )}
 
