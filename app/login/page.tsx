@@ -76,7 +76,7 @@ export default function LoginPage() {
           <div className="space-y-2">
             <Button
               variant="outline"
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 cursor-pointer"
               disabled={googleLoading || githubLoading}
               onClick={async () => {
                 setGoogleLoading(true);
@@ -93,7 +93,7 @@ export default function LoginPage() {
 
             <Button
               variant="outline"
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 cursor-pointer"
               disabled={googleLoading || githubLoading}
               onClick={async () => {
                 setGithubLoading(true);

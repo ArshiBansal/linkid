@@ -102,7 +102,7 @@ export default function RegisterPage() {
 
                         <Button
                             variant="outline"
-                            className="flex w-full items-center justify-center gap-2"
+                            className="flex w-full items-center justify-center gap-2 cursor-pointer"
                             disabled={googleLoading || githubLoading}
                             onClick={async () => {
                                 setGoogleLoading(true);
@@ -119,7 +119,7 @@ export default function RegisterPage() {
 
                         <Button
                             variant="outline"
-                            className="flex w-full items-center justify-center gap-2"
+                            className="flex w-full items-center justify-center gap-2 cursor-pointer"
                             disabled={googleLoading || githubLoading}
                             onClick={async () => {
                                 setGithubLoading(true);
