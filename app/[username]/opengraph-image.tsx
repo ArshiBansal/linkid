@@ -10,6 +10,10 @@ export const size = {
 
 export const contentType = 'image/png';
 
+// Force runtime rendering — this queries the DB and cannot be prerendered at build time.
+export const dynamic = 'force-dynamic';
+
+
 export default async function Image({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
   const resolved = await resolveUserByUsername(username);
