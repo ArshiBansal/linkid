@@ -6,6 +6,8 @@ import BackToTop from "@/components/ui/BackToTop";
 
 import PwaRegister from "@/components/PwaRegister";
 
+import { headers } from "next/headers";
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -29,18 +31,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headerList = await headers();
+  const nonce = headerList.get("x-nonce") || undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${inter.variable} antialiased`}
       >
         <PwaRegister />
-        <Providers>{children}</Providers>
+        <Providers nonce={nonce}>{children}</Providers>
         <BackToTop />
       </body>
     </html>

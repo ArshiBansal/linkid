@@ -45,7 +45,7 @@ export async function middleware(req: NextRequest) {
       font-src 'self' data:;
       object-src 'none';
       base-uri 'self';
-      form-action 'self';
+      form-action 'self' https://accounts.google.com https://github.com;
       frame-ancestors 'none';
       connect-src 'self';
       upgrade-insecure-requests;
