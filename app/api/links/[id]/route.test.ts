@@ -21,6 +21,15 @@ mock.module("@/lib/auth", {
 
 mock.module("@/lib/prisma", {
     defaultExport: {
+        $transaction: (cb: any) => cb({
+            link: {
+                findFirst: () => Promise.resolve(null),
+                update: (args: unknown) => {
+                    capturedUpdateArgs = args;
+                    return Promise.resolve({});
+                },
+            }
+        }),
         link: {
             findUnique: () => Promise.resolve(mockLink),
             update: (args: unknown) => {
@@ -31,6 +40,15 @@ mock.module("@/lib/prisma", {
     },
     namedExports: {
         prisma: {
+            $transaction: (cb: any) => cb({
+                link: {
+                    findFirst: () => Promise.resolve(null),
+                    update: (args: unknown) => {
+                        capturedUpdateArgs = args;
+                        return Promise.resolve({});
+                    },
+                }
+            }),
             link: {
                 findUnique: () => Promise.resolve(mockLink),
                 update: (args: unknown) => {
