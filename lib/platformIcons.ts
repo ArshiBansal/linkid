@@ -16,6 +16,8 @@ import {
     SiDevdotto,
     SiCodechef,
     SiCodeforces,
+    SiKaggle,
+    SiGeeksforgeeks,
 } from "react-icons/si";
 
 import type { ComponentType, SVGProps } from "react";
@@ -38,6 +40,8 @@ export const PLATFORMS = {
     dribbble: { icon: FaDribbble, name: "Dribbble" },
     codechef: { icon: SiCodechef, name: "CodeChef" },
     codeforces: { icon: SiCodeforces, name: "Codeforces" },
+    kaggle: { icon: SiKaggle, name: "Kaggle" },
+    geeksforgeeks: { icon: SiGeeksforgeeks, name: "GeeksforGeeks" },
 } as const;
 
 export const PLATFORM_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> =

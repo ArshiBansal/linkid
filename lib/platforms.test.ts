@@ -11,7 +11,7 @@ test("isKnownPlatform returns true for every declared platform", () => {
         PLATFORMS.GITHUB, PLATFORMS.LINKEDIN, "leetcode", PLATFORMS.YOUTUBE, "x",
         PLATFORMS.FACEBOOK, PLATFORMS.INSTAGRAM, "discord", "twitch",
         "hashnode", "devto", PLATFORMS.MEDIUM, "dribbble", PLATFORMS.WEBSITE,
-        "codeforces", "codechef",
+        "codeforces", "codechef", PLATFORMS.KAGGLE, PLATFORMS.GEEKSFORGEEKS,
     ];
     for (const p of known) {
         assert.equal(isKnownPlatform(p), true, `expected true for "${p}"`);
@@ -59,6 +59,11 @@ test("validatePlatformUrl accepts valid URLs for each platform", () => {
     assert.equal(validatePlatformUrl("dribbble", "https://dribbble.com/designer"), true);
     assert.equal(validatePlatformUrl("codeforces", "https://codeforces.com/profile/tourist"), true);
     assert.equal(validatePlatformUrl("codechef", "https://www.codechef.com/users/tourist"), true);
+    assert.equal(validatePlatformUrl(PLATFORMS.KAGGLE, "https://kaggle.com/alexisbcook"), true);
+    assert.equal(validatePlatformUrl(PLATFORMS.KAGGLE, "https://www.kaggle.com/alexisbcook"), true);
+    assert.equal(validatePlatformUrl(PLATFORMS.GEEKSFORGEEKS, "https://geeksforgeeks.org/user/gfguser"), true);
+    assert.equal(validatePlatformUrl(PLATFORMS.GEEKSFORGEEKS, "https://www.geeksforgeeks.org/user/gfguser"), true);
+    assert.equal(validatePlatformUrl(PLATFORMS.GEEKSFORGEEKS, "https://auth.geeksforgeeks.org/user/gfguser"), true);
     assert.equal(validatePlatformUrl(PLATFORMS.WEBSITE, "https://my-portfolio.com"), true);
     assert.equal(validatePlatformUrl(PLATFORMS.WEBSITE, "https://blog.example.com/posts"), true);
 });
@@ -71,7 +76,8 @@ test("validatePlatformUrl rejects URLs that don't match the platform", () => {
     assert.equal(validatePlatformUrl("twitch", "https://youtube.com/@streamer"), false);
     assert.equal(validatePlatformUrl("codeforces", "https://codechef.com/users/tourist"), false);
     assert.equal(validatePlatformUrl("codechef", "https://codeforces.com/profile/tourist"), false);
-
+    assert.equal(validatePlatformUrl(PLATFORMS.KAGGLE, "https://geeksforgeeks.org/user/gfguser"), false);
+    assert.equal(validatePlatformUrl(PLATFORMS.GEEKSFORGEEKS, "https://kaggle.com/alexisbcook"), false);
 });
 
 test("validatePlatformUrl rejects cross-platform URL swaps", () => {
@@ -97,7 +103,8 @@ test("validatePlatformUrl rejects cross-platform URL swaps", () => {
     assert.equal(validatePlatformUrl("dribbble", "https://figma.com/@designer"), false);
     assert.equal(validatePlatformUrl("codeforces", "https://codechef.com/users/tourist"), false);
     assert.equal(validatePlatformUrl("codechef", "https://codeforces.com/profile/tourist"), false);
-
+    assert.equal(validatePlatformUrl(PLATFORMS.KAGGLE, "https://leetcode.com/jsmith"), false);
+    assert.equal(validatePlatformUrl(PLATFORMS.GEEKSFORGEEKS, "https://codeforces.com/profile/tourist"), false);
 });
 
 test("validatePlatformUrl rejects LinkedIn /messaging/ and /feed/ paths", () => {
