@@ -18,6 +18,8 @@ export type Platform =
     | "dribbble"
     | "codeforces"
     | "codechef"
+    | "kaggle"
+    | "geeksforgeeks"
     | "website";
 
 
@@ -46,6 +48,8 @@ const PLATFORM_PATTERNS: Record<Platform, RegExp> = {
     dribbble: /^https?:\/\/(www\.)?dribbble\.com\/[A-Za-z0-9_-]+\/?(\?.*)?$/i,
     codechef: /^https?:\/\/(www\.)?codechef\.com\/users\/[A-Za-z0-9_.-]+\/?(\?.*)?$/i,
     codeforces: /^https?:\/\/(www\.)?codeforces\.com\/profile\/[A-Za-z0-9_.-]+\/?(\?.*)?$/i,
+    kaggle: /^https?:\/\/(www\.)?kaggle\.com\/[A-Za-z0-9_.-]+\/?(\?.*)?$/i,
+    geeksforgeeks: /^https?:\/\/(www\.|auth\.)?geeksforgeeks\.org\/user\/[A-Za-z0-9_.-]+\/?(\?.*)?$/i,
     website: /^https?:\/\/.+/i,
 };
 

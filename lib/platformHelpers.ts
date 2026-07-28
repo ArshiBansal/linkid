@@ -11,7 +11,8 @@ export const formatLabel = (key: string) => {
         devto: "Dev.to",
         codeforces: "Codeforces",
         codechef: "CodeChef",
-
+        kaggle: "Kaggle",
+        geeksforgeeks: "GeeksforGeeks",
     };
     return exceptions[key] || key.charAt(0).toUpperCase() + key.slice(1);
 };

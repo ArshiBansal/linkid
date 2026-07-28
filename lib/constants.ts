@@ -17,6 +17,8 @@ export const PLATFORMS = {
     X: "x",
     TWITCH: "twitch",
     DISCORD: "discord",
+    KAGGLE: "kaggle",
+    GEEKSFORGEEKS: "geeksforgeeks",
 } as const;
 
 export type PlatformKey = keyof typeof PLATFORMS;
