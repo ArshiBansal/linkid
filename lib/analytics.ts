@@ -8,8 +8,20 @@ import {
 } from "@/lib/analyticsUtils";
 import { enqueueJob } from "@/lib/jobs";
 import prisma from "@/lib/prisma";
+import { computePercentChange } from "@/lib/analyticsMath";
 
 const UNIQUE_VISITOR_WINDOW_HOURS = 24;
+
+type PeriodComparison = {
+    previousTotals: {
+        totalClicks: number;
+        uniqueClicks: number;
+    };
+    totalClicksChangePercent: number | "new" | null;
+    uniqueClicksChangePercent: number | "new" | null;
+};
+
+
 
 type TrackClickInput = {
     linkId: string;
@@ -220,7 +232,13 @@ export async function getUserAnalyticsSummary(input: {
         ? null
         : utcDayStart(new Date(Date.now() - (rangeDays - 1) * 24 * 60 * 60 * 1000));
 
-    const [totals, perLink, clicksOverTimeRaw, recentActivityEvent] = await Promise.all([
+    const previousStart = rangeDays === null || start === null
+        ? null
+        : utcDayStart(new Date(start.getTime() - rangeDays * 24 * 60 * 60 * 1000));
+
+    const allowedComparison = rangeDays === 7 || rangeDays === 30 || rangeDays === 90;
+
+    const [totals, perLink, clicksOverTimeRaw, recentActivityEvent, previousTotals] = await Promise.all([
         prisma.dailyLinkAnalytics.aggregate({
             where: {
                 userId: input.userId,
@@ -275,6 +293,15 @@ export async function getUserAnalyticsSummary(input: {
                 },
             },
         }),
+        previousStart !== null && start !== null && allowedComparison
+            ? prisma.dailyLinkAnalytics.aggregate({
+                  where: {
+                      userId: input.userId,
+                      date: { gte: previousStart, lt: start },
+                  },
+                  _sum: { totalClicks: true, uniqueClicks: true },
+              })
+            : Promise.resolve(null),
     ]);
 
     const clicksOverTime = clicksOverTimeRaw.map((entry) => ({
@@ -297,6 +324,23 @@ export async function getUserAnalyticsSummary(input: {
           }
         : null;
 
+    const comparison: PeriodComparison | null = previousTotals
+        ? {
+              previousTotals: {
+                  totalClicks: previousTotals._sum.totalClicks ?? 0,
+                  uniqueClicks: previousTotals._sum.uniqueClicks ?? 0,
+              },
+              totalClicksChangePercent: computePercentChange(
+                  totals._sum.totalClicks ?? 0,
+                  previousTotals._sum.totalClicks ?? 0
+              ),
+              uniqueClicksChangePercent: computePercentChange(
+                  totals._sum.uniqueClicks ?? 0,
+                  previousTotals._sum.uniqueClicks ?? 0
+              ),
+          }
+        : null;
+
     if (perLink.length === 0) {
         return {
             rangeDays,
@@ -309,6 +353,7 @@ export async function getUserAnalyticsSummary(input: {
             clicksOverTime: [],
             platformPerformance: [],
             recentActivity: null,
+            comparison,
         };
     }
 
@@ -383,5 +428,6 @@ export async function getUserAnalyticsSummary(input: {
         clicksOverTime,
         platformPerformance,
         recentActivity,
+        comparison,
     };
 }
