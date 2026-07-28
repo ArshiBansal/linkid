@@ -7,26 +7,26 @@ let mockUser: unknown = null;
 const callOrder: string[] = [];
 
 mock.module("next-auth", {
-  exports: {
+  namedExports: {
     getServerSession: () => Promise.resolve(mockSession),
   },
 });
 
 mock.module("@/lib/auth", {
-  exports: { authOptions: {} },
+  namedExports: { authOptions: {} },
 });
 
 mock.module("@/lib/prisma", {
-  exports: {
-    default: {
-      user: {
-        findUnique: () => Promise.resolve(mockUser),
-        delete: () => {
-          callOrder.push("deleteUser");
-          return Promise.resolve({});
-        },
+  defaultExport: {
+    user: {
+      findUnique: () => Promise.resolve(mockUser),
+      delete: () => {
+        callOrder.push("deleteUser");
+        return Promise.resolve({});
       },
     },
+  },
+  namedExports: {
     prisma: {
       user: {
         findUnique: () => Promise.resolve(mockUser),
@@ -40,7 +40,7 @@ mock.module("@/lib/prisma", {
 });
 
 mock.module("@/lib/deleteOtpStore", {
-  exports: {
+  namedExports: {
     verifyOtp: () => Promise.resolve({ valid: true }),
     clearOtp: () => {
       callOrder.push("clearOtp");
@@ -50,7 +50,7 @@ mock.module("@/lib/deleteOtpStore", {
 });
 
 mock.module("@/lib/sessionInvalidation", {
-  exports: {
+  namedExports: {
     invalidateUserSessions: () => {
       callOrder.push("invalidateUserSessions");
       return Promise.resolve({});

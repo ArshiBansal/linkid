@@ -70,6 +70,15 @@ type RecentActivity = {
     createdAt: string;
 } | null;
 
+type PeriodComparison = {
+    previousTotals: {
+        totalClicks: number;
+        uniqueClicks: number;
+    };
+    totalClicksChangePercent: number | "new" | null;
+    uniqueClicksChangePercent: number | "new" | null;
+} | null;
+
 type AnalyticsSummary = {
     rangeDays: number | null;
     totals: {
@@ -81,9 +90,21 @@ type AnalyticsSummary = {
     clicksOverTime: ClicksOverTimePoint[];
     platformPerformance: PlatformPerformanceEntry[];
     recentActivity: RecentActivity;
+    comparison: PeriodComparison;
 };
 
 const PIE_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ec4899", "#06b6d4", "#a855f7", "#ef4444"];
+
+function formatTrend(change: number | "new" | null | undefined) {
+    if (change === null || change === undefined) return null;
+    if (change === "new") {
+        return { text: "New", className: "text-muted-foreground" };
+    }
+    const rounded = Math.round(change);
+    if (rounded > 0) return { text: `+${rounded}%`, className: "text-green-600" };
+    if (rounded < 0) return { text: `${rounded}%`, className: "text-red-600" };
+    return { text: "0%", className: "text-muted-foreground" };
+}
 
 export function AnalyticsOverview() {
     const [days, setDays] = useState<"7" | "30" | "90" | "all">("30");
@@ -149,16 +170,24 @@ export function AnalyticsOverview() {
     const cards = useMemo(() => {
         if (!summary) {
             return [
-                { label: "Total Clicks", value: 0 },
-                { label: "Unique Visitors", value: 0 },
-                { label: "Filtered Bot Hits", value: 0 },
+                { label: "Total Clicks", value: 0, change: null },
+                { label: "Unique Visitors", value: 0, change: null },
+                { label: "Filtered Bot Hits", value: 0, change: null },
             ];
         }
 
         return [
-            { label: "Total Clicks", value: summary.totals.totalClicks },
-            { label: "Unique Visitors", value: summary.totals.uniqueClicks },
-            { label: "Filtered Bot Hits", value: summary.totals.botClicks },
+            {
+                label: "Total Clicks",
+                value: summary.totals.totalClicks,
+                change: summary.comparison?.totalClicksChangePercent ?? null,
+            },
+            {
+                label: "Unique Visitors",
+                value: summary.totals.uniqueClicks,
+                change: summary.comparison?.uniqueClicksChangePercent ?? null,
+            },
+            { label: "Filtered Bot Hits", value: summary.totals.botClicks, change: null },
         ];
     }, [summary]);
 
@@ -237,20 +266,35 @@ export function AnalyticsOverview() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-4">
-                {cards.map((card) => (
-                    <Card key={card.label}>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">
-                                {card.label}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-2xl font-bold">
-                                {loading ? "—" : card.value.toLocaleString()}
-                            </p>
-                        </CardContent>
-                    </Card>
-                ))}
+                {cards.map((card) => {
+                    const trend = loading ? null : formatTrend(card.change);
+                    return (
+                        <Card key={card.label}>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                                    {card.label}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex items-baseline gap-2">
+                                    <p className="text-2xl font-bold">
+                                        {loading ? "—" : card.value.toLocaleString()}
+                                    </p>
+                                    {trend && (
+                                        <span className={`text-xs font-medium ${trend.className}`}>
+                                            {trend.text}
+                                        </span>
+                                    )}
+                                </div>
+                                {trend && days !== "all" && (
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        vs. previous {`${days} days`}
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    );
+                })}
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
