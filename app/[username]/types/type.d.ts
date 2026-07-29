@@ -19,6 +19,8 @@ export type PlatformParams = {
     username: string;
 }
 
+export type LayoutStyle = "LIST" | "GRID";
+
 export type User = {
     user: {
         name: string | null;
@@ -28,6 +30,7 @@ export type User = {
         links?: Link[];
         resumeUrl?: string | null;
         enableEmailCapture?: boolean;
+        layoutStyle?: LayoutStyle | string;
     };
     username: string;
     showCTA: boolean;
@@ -42,6 +45,7 @@ export type ProfileLinksProps = {
     links?: Link[];
     username: string;
     isOwner: boolean;
+    layoutStyle?: LayoutStyle | string;
 };
 
 export type ProfileHeader = {
@@ -54,5 +58,6 @@ export type ProfileHeader = {
 export type ProfileLinks = {
     link: Link;
     username: string;
+    layoutStyle?: LayoutStyle | string;
 }
 

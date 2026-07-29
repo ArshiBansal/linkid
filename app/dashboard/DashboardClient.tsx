@@ -10,6 +10,7 @@ import { AnalyticsOverview } from "./AnalyticsOverview";
 import { VersionHistory } from "@/components/dashboard/VersionHistory";
 import { AppearanceSection } from "./AppearanceSection";
 import { SeoSection } from "./SeoSection";
+import { LayoutStyle } from "@/app/[username]/types/type";
 
 export default function DashboardClient({
     username,
@@ -17,6 +18,7 @@ export default function DashboardClient({
     initialTheme,
     initialSeoTitle,
     initialSeoDescription,
+    initialLayout,
     qrCode,
     enableEmailCapture,
     subscribers = [],
@@ -26,12 +28,14 @@ export default function DashboardClient({
     initialTheme?: string;
     initialSeoTitle?: string;
     initialSeoDescription?: string;
+    initialLayout?: LayoutStyle;
     qrCode?: React.ReactNode;
     enableEmailCapture?: boolean;
     subscribers?: { id: string; email: string; createdAt: Date }[];
 }) {
     const [links, setLinks] = useState(initialLinks);
     const [theme, setTheme] = useState(initialTheme || "default");
+    const [layoutStyle, setLayoutStyle] = useState<LayoutStyle>(initialLayout || "LIST");
     const [seoTitle, setSeoTitle] = useState(initialSeoTitle || "");
     const [seoDescription, setSeoDescription] = useState(initialSeoDescription || "");
     const [activeTab, setActiveTab] = useState<"links" | "appearance" | "seo">("links");
@@ -291,7 +295,9 @@ export default function DashboardClient({
                 ) : activeTab === 'appearance' ? (
                     <AppearanceSection 
                         initialTheme={theme} 
+                        initialLayout={layoutStyle}
                         onUpdateTheme={setTheme} 
+                        onUpdateLayout={setLayoutStyle}
                     />
                 ) : (
                     <SeoSection 

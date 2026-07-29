@@ -129,6 +129,7 @@ export default async function PublicProfile({
             links: activeLinks,
             resumeUrl: publicUserData?.resumeUrl ?? null,
             enableEmailCapture: user.enableEmailCapture,
+            layoutStyle: user.layoutStyle,
           }}
           username={resolved.canonicalUsername}
           showCTA={!session}
