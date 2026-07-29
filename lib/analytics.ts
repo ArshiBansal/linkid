@@ -8,7 +8,8 @@ import {
 } from "@/lib/analyticsUtils";
 import { enqueueJob } from "@/lib/jobs";
 import prisma from "@/lib/prisma";
-import { computePercentChange } from "@/lib/analyticsMath";
+import { computePercentChange, buildTopBreakdown } from "@/lib/analyticsMath";
+
 
 const UNIQUE_VISITOR_WINDOW_HOURS = 24;
 
@@ -20,6 +21,7 @@ type PeriodComparison = {
     totalClicksChangePercent: number | "new" | null;
     uniqueClicksChangePercent: number | "new" | null;
 };
+
 
 
 
@@ -238,7 +240,16 @@ export async function getUserAnalyticsSummary(input: {
 
     const allowedComparison = rangeDays === 7 || rangeDays === 30 || rangeDays === 90;
 
-    const [totals, perLink, clicksOverTimeRaw, recentActivityEvent, previousTotals] = await Promise.all([
+    const [
+        totals,
+        perLink,
+        clicksOverTimeRaw,
+        recentActivityEvent,
+        previousTotals,
+        referrerGroups,
+        deviceGroups,
+        countryGroups,
+    ] = await Promise.all([
         prisma.dailyLinkAnalytics.aggregate({
             where: {
                 userId: input.userId,
@@ -302,6 +313,33 @@ export async function getUserAnalyticsSummary(input: {
                   _sum: { totalClicks: true, uniqueClicks: true },
               })
             : Promise.resolve(null),
+        prisma.clickEvent.groupBy({
+            by: ["referrer"],
+            where: {
+                userId: input.userId,
+                isBot: false,
+                ...(start !== null && { createdAt: { gte: start } }),
+            },
+            _count: { _all: true },
+        }),
+        prisma.clickEvent.groupBy({
+            by: ["deviceType"],
+            where: {
+                userId: input.userId,
+                isBot: false,
+                ...(start !== null && { createdAt: { gte: start } }),
+            },
+            _count: { _all: true },
+        }),
+        prisma.clickEvent.groupBy({
+            by: ["country"],
+            where: {
+                userId: input.userId,
+                isBot: false,
+                ...(start !== null && { createdAt: { gte: start } }),
+            },
+            _count: { _all: true },
+        }),
     ]);
 
     const clicksOverTime = clicksOverTimeRaw.map((entry) => ({
@@ -341,6 +379,21 @@ export async function getUserAnalyticsSummary(input: {
           }
         : null;
 
+    const topReferrers = buildTopBreakdown(
+        referrerGroups.map((g) => ({ key: g.referrer, count: g._count._all })),
+        "Direct / Unknown"
+    );
+
+    const topDevices = buildTopBreakdown(
+        deviceGroups.map((g) => ({ key: g.deviceType, count: g._count._all })),
+        "Unknown"
+    );
+
+    const topCountries = buildTopBreakdown(
+        countryGroups.map((g) => ({ key: g.country, count: g._count._all })),
+        "Unknown"
+    );
+
     if (perLink.length === 0) {
         return {
             rangeDays,
@@ -354,6 +407,9 @@ export async function getUserAnalyticsSummary(input: {
             platformPerformance: [],
             recentActivity: null,
             comparison,
+            topReferrers,
+            topDevices,
+            topCountries,
         };
     }
 
@@ -429,5 +485,8 @@ export async function getUserAnalyticsSummary(input: {
         platformPerformance,
         recentActivity,
         comparison,
+        topReferrers,
+        topDevices,
+        topCountries,
     };
 }

@@ -33,6 +33,7 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
+import type { BreakdownEntry } from "@/lib/analyticsMath";
 
 type LinkAnalytics = {
     id: string;
@@ -91,6 +92,9 @@ type AnalyticsSummary = {
     platformPerformance: PlatformPerformanceEntry[];
     recentActivity: RecentActivity;
     comparison: PeriodComparison;
+    topReferrers: BreakdownEntry[];
+    topDevices: BreakdownEntry[];
+    topCountries: BreakdownEntry[];
 };
 
 const PIE_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ec4899", "#06b6d4", "#a855f7", "#ef4444"];
@@ -104,6 +108,35 @@ function formatTrend(change: number | "new" | null | undefined) {
     if (rounded > 0) return { text: `+${rounded}%`, className: "text-green-600" };
     if (rounded < 0) return { text: `${rounded}%`, className: "text-red-600" };
     return { text: "0%", className: "text-muted-foreground" };
+}
+
+function BreakdownList({ entries }: { entries: BreakdownEntry[] }) {
+    if (entries.length === 0) {
+        return <p className="text-sm text-muted-foreground">No data yet.</p>;
+    }
+
+    const max = Math.max(...entries.map((e) => e.count));
+
+    return (
+        <div className="space-y-2">
+            {entries.map((entry) => (
+                <div key={entry.label} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                        <span className="truncate pr-2 font-medium">{entry.label}</span>
+                        <span className="shrink-0 text-muted-foreground">
+                            {entry.count.toLocaleString()}
+                        </span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted">
+                        <div
+                            className="h-1.5 rounded-full bg-indigo-500"
+                            style={{ width: `${max > 0 ? (entry.count / max) * 100 : 0}%` }}
+                        />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
 }
 
 export function AnalyticsOverview() {
@@ -433,6 +466,53 @@ export function AnalyticsOverview() {
                     )}
                 </CardContent>
             </Card>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Top Referrers
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <p className="text-sm text-muted-foreground">Loading…</p>
+                        ) : (
+                            <BreakdownList entries={summary?.topReferrers ?? []} />
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Top Devices
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <p className="text-sm text-muted-foreground">Loading…</p>
+                        ) : (
+                            <BreakdownList entries={summary?.topDevices ?? []} />
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Top Countries
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <p className="text-sm text-muted-foreground">Loading…</p>
+                        ) : (
+                            <BreakdownList entries={summary?.topCountries ?? []} />
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
             <Card>
                 <CardHeader>
