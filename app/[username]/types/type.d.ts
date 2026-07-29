@@ -28,6 +28,7 @@ export type User = {
         links?: Link[];
         resumeUrl?: string | null;
         enableEmailCapture?: boolean;
+        layoutStyle?: string;
     };
     username: string;
     showCTA: boolean;
@@ -42,6 +43,7 @@ export type ProfileLinksProps = {
     links?: Link[];
     username: string;
     isOwner: boolean;
+    layoutStyle?: string;
 };
 
 export type ProfileHeader = {
@@ -54,5 +56,6 @@ export type ProfileHeader = {
 export type ProfileLinks = {
     link: Link;
     username: string;
+    layoutStyle?: string;
 }
 

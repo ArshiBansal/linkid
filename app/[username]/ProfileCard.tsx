@@ -34,6 +34,7 @@ export function ProfileCard(props: ProfileCardProps) {
                     links={user.links ?? []}
                     username={username}
                     isOwner={isOwner}
+                    layoutStyle={user.layoutStyle}
                 />
 
                 {showCTA && <ProfileCTA />}

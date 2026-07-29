@@ -6,6 +6,7 @@ export function ProfileLinks({
     links,
     username,
     isOwner,
+    layoutStyle,
 }: ProfileLinksProps) {
     const safeLinks = links ?? [];
 
@@ -13,13 +14,19 @@ export function ProfileLinks({
         return <EmptyProfileState isOwner={isOwner} />;
     }
 
+    const isGrid = layoutStyle === "GRID";
+    const containerClass = isGrid 
+        ? "grid grid-cols-3 md:grid-cols-4 gap-4"
+        : "space-y-3";
+
     return (
-        <div className="space-y-3">
+        <div className={containerClass}>
             {safeLinks.map((link) => (
                 <ProfileLinkItem
                     key={link.id}
                     link={link}
                     username={username}
+                    layoutStyle={layoutStyle}
                 />
             ))}
         </div>

@@ -6,6 +6,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum LayoutStyle {
+  LIST
+  GRID
+}
+
 model User {
   id            String   @id @default(uuid())
   name          String?
@@ -28,6 +33,7 @@ model User {
   themeColor          String   @default("slate")
   themeCustom         String?
   enableEmailCapture  Boolean  @default(false)
+  layoutStyle         LayoutStyle @default(LIST)
 
   links         Link[]
   accounts      Account[]
