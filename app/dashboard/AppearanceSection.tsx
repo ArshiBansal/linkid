@@ -12,6 +12,8 @@ const THEMES = [
     { id: "sunset", label: "Sunset", color: "#c2410c", bg: "#fffbeb" },
 ];
 
+import { LayoutStyle } from "@/app/[username]/types/type";
+
 export function AppearanceSection({
     initialTheme,
     initialLayout,
@@ -19,9 +21,9 @@ export function AppearanceSection({
     onUpdateLayout,
 }: {
     initialTheme: string;
-    initialLayout: string;
+    initialLayout: LayoutStyle;
     onUpdateTheme: (theme: string) => void;
-    onUpdateLayout: (layout: string) => void;
+    onUpdateLayout: (layout: LayoutStyle) => void;
 }) {
     const [selectedTheme, setSelectedTheme] = useState(initialTheme || "default");
     const [selectedLayout, setSelectedLayout] = useState(initialLayout || "LIST");
@@ -57,7 +59,8 @@ export function AppearanceSection({
         }
     }
 
-    async function handleSaveLayout(layoutId: string) {
+    async function handleSaveLayout(layoutId: LayoutStyle) {
+        const previousLayout = selectedLayout as LayoutStyle;
         setSelectedLayout(layoutId);
         setSavingLayout(true);
         try {
@@ -79,6 +82,7 @@ export function AppearanceSection({
             onUpdateLayout(data.layoutStyle);
             toast.success("Layout updated successfully!");
         } catch (error) {
+            setSelectedLayout(previousLayout);
             toast.error("Failed to update layout");
             console.error(error);
         } finally {

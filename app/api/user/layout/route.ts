@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { LayoutStyle } from "@/app/[username]/types/type";
 
 export async function PATCH(req: NextRequest) {
     try {
@@ -17,9 +18,11 @@ export async function PATCH(req: NextRequest) {
             return NextResponse.json({ error: "Invalid layout style" }, { status: 400 });
         }
 
+        const validLayout: LayoutStyle = layoutStyle;
+
         const updatedUser = await prisma.user.update({
             where: { email: session.user.email },
-            data: { layoutStyle },
+            data: { layoutStyle: validLayout },
         });
 
         return NextResponse.json({ success: true, layoutStyle: updatedUser.layoutStyle }, { status: 200 });

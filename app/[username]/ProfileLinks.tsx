@@ -16,7 +16,7 @@ export function ProfileLinks({
 
     const isGrid = layoutStyle === "GRID";
     const containerClass = isGrid 
-        ? "grid grid-cols-3 md:grid-cols-4 gap-4"
+        ? "grid grid-cols-2 md:grid-cols-4 gap-4"
         : "space-y-3";
 
     return (

@@ -31,7 +31,7 @@ export function ProfileLinkItem({ link, username, layoutStyle }: ProfileLinks) {
                     <Icon className="h-6 w-6" />
                 </div>
                 <span className="font-medium text-xs text-center truncate w-full capitalize">
-                    {link.label}
+                    {link.label || link.platform}
                 </span>
             </a>
         );
@@ -51,7 +51,7 @@ export function ProfileLinkItem({ link, username, layoutStyle }: ProfileLinks) {
                 </div>
 
                 <span className="font-medium capitalize">
-                    {link.label}
+                    {link.label || link.platform}
                 </span>
             </div>
 
