@@ -44,6 +44,7 @@ export async function PUT(
   const platform = body?.platform;
   const startDate = body?.startDate;
   const endDate = body?.endDate;
+  const parentId = body?.parentId;
 
   const rawExplicitPlatform = typeof platform === "string" ? platform.trim() : null;
   const explicitPlatform = rawExplicitPlatform && Object.keys(PLATFORM_ICONS).includes(rawExplicitPlatform)
@@ -59,7 +60,31 @@ export async function PUT(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const data: { url?: string; isPublic?: boolean; label?: string; platform?: string; startDate?: Date | null; endDate?: Date | null } = {};
+  const data: { url?: string; isPublic?: boolean; label?: string; platform?: string; startDate?: Date | null; endDate?: Date | null; parentId?: string | null } = {};
+
+  // Handle parentId changes (move link into/out of a group)
+  if (parentId !== undefined) {
+    if (link.isGroup) {
+      return NextResponse.json(
+        { error: "Groups cannot be nested inside other groups" },
+        { status: 400 }
+      );
+    }
+    if (parentId === null) {
+      data.parentId = null;
+    } else {
+      const parentGroup = await prisma.link.findFirst({
+        where: { id: parentId, userId: link.userId, isGroup: true },
+      });
+      if (!parentGroup) {
+        return NextResponse.json(
+          { error: "The specified group does not exist" },
+          { status: 400 }
+        );
+      }
+      data.parentId = parentId;
+    }
+  }
 
   const activeLabel = typeof label === "string" ? label.trim() : link.label;
 
@@ -158,12 +183,13 @@ export async function PUT(
   try {
     const updatedLink = await prisma.$transaction(async (tx) => {
         // Enforce uniqueness for the resulting route if platform is changing
-        if (data.platform) {
+        if (data.platform && data.platform !== "system_group") {
             const proposedRoute = link.alias || data.platform;
             const existingLink = await tx.link.findFirst({
                 where: {
                     userId: link.userId,
                     id: { not: link.id },
+                    isGroup: false,
                     OR: [
                         { alias: proposedRoute },
                         { platform: proposedRoute, alias: null }
@@ -232,6 +258,15 @@ export async function DELETE(
 
   const { id } = await context.params;
 
+  // Parse body for group deletion options (may be empty for regular links)
+  let deleteChildren = false;
+  try {
+    const body = await req.json();
+    deleteChildren = body?.deleteChildren === true;
+  } catch {
+    // No body is fine for regular link deletion
+  }
+
   const link = await prisma.link.findUnique({
     where: { id },
     include: { user: true },
@@ -241,11 +276,48 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Group deletion with transaction
+  if (link.isGroup) {
+    await prisma.$transaction(async (tx) => {
+      if (deleteChildren) {
+        // Delete all children first, then the group
+        await tx.link.deleteMany({
+          where: { parentId: id, userId: link.userId },
+        });
+      } else {
+        // Ungroup: set children's parentId to null and reassign positions
+        const children = await tx.link.findMany({
+            where: { parentId: id, userId: link.userId },
+            orderBy: { position: 'asc' },
+        });
+
+        const maxOrder = await tx.link.aggregate({
+            where: { userId: link.userId, parentId: null },
+            _max: { position: true },
+        });
+
+        let nextPosition = (maxOrder._max.position ?? 0) + 1;
+        
+        for (const child of children) {
+            await tx.link.update({
+                where: { id: child.id },
+                data: { parentId: null, position: nextPosition++ },
+            });
+        }
+      }
+      await tx.link.delete({ where: { id } });
+    });
+
+    return NextResponse.json({ success: true });
+  }
+
+  // Regular link deletion
   await prisma.link.delete({
     where: { id },
   });
 
   return NextResponse.json({ success: true });
 }
+
 
 
