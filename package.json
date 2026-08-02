@@ -12,6 +12,7 @@
     "migrate:deploy:safe": "node scripts/safe-prisma-migrate-deploy.mjs",
     "dbpush": "prisma db push",
     "lint": "eslint",
+    "pretest": "node scripts/pretest-prisma-generate.mjs",
     "test": "tsx --test --experimental-test-module-mocks lib/**/*.test.ts app/**/*.test.ts",
     "test:ui": "jest",
     "test:ui:watch": "jest --watch"
