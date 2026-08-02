@@ -1,15 +1,37 @@
 import prisma from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
-import type { Link } from "@prisma/client";
+import { Prisma, type Link } from "@prisma/client";
 
 import { nestLinks } from "./linkTree";
 
+// Only public profile fields — never `password`, `email`, `emailVerified`, or
+// TOTP columns. This object is cached by unstable_cache and rendered into the
+// public, unauthenticated profile tree, so credential material must not be here.
+const publicProfileSelect = {
+    id: true,
+    name: true,
+    username: true,
+    bio: true,
+    image: true,
+    theme: true,
+    themeType: true,
+    themeColor: true,
+    themeCustom: true,
+    layoutStyle: true,
+    enableEmailCapture: true,
+    seoTitle: true,
+    seoDescription: true,
+    links: {
+        where: { isPublic: true },
+        orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+    },
+} satisfies Prisma.UserSelect;
 
 export const resolveUserByUsername = unstable_cache(
     async (username: string) => {
         const exactUser = await prisma.user.findUnique({
             where: { username },
-            include: { links: { where: { isPublic: true }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] } },
+            select: publicProfileSelect,
         });
 
         if (exactUser) {
@@ -26,7 +48,7 @@ export const resolveUserByUsername = unstable_cache(
 
         const user = await prisma.user.findUnique({
             where: { id: alias.userId },
-            include: { links: { where: { isPublic: true }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] } },
+            select: publicProfileSelect,
         });
 
         if (!user) {

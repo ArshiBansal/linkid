@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
+import prisma from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { ProfileCard } from "./ProfileCard";
 import { ProfileFooter } from "./ProfileFooter";
@@ -83,8 +84,17 @@ export default async function PublicProfile({
   const { getPublicUserData } = await import("@/lib/userLookup");
   const publicUserData = await getPublicUserData(resolved.canonicalUsername);
 
-  const isOwner =
-    session?.user?.email?.toLowerCase() === user.email?.toLowerCase();
+  // Compare against the owner's email fetched separately (server-side, uncached)
+  // so credential/PII fields never enter the public profile cache.
+  let isOwner = false;
+  if (session?.user?.email) {
+    const owner = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { email: true },
+    });
+    isOwner =
+      owner?.email?.toLowerCase() === session.user.email.toLowerCase();
+  }
 
   const bgStyle: React.CSSProperties = {};
   if (user.themeType === "solid") {

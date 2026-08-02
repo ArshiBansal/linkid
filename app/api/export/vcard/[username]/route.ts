@@ -9,7 +9,13 @@ export async function GET(
     const { username } = await params;
     const user = await prisma.user.findUnique({
       where: { username },
-      include: {
+      // Only the fields the vCard needs — never the password hash or TOTP columns.
+      select: {
+        name: true,
+        username: true,
+        bio: true,
+        image: true,
+        email: true,
         links: {
           where: { isPublic: true },
         },
