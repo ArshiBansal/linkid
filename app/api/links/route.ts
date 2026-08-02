@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
     } else {
         finalPlatform = detectedPlatform;
         finalLabel = customLabel ||
-            detectedPlatform.charAt(0).toUpperCase() +
+            detectedPlatform[0].toUpperCase() +
             detectedPlatform.slice(1);
     }
 

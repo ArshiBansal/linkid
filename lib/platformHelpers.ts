@@ -14,7 +14,7 @@ export const formatLabel = (key: string) => {
         kaggle: "Kaggle",
         geeksforgeeks: "GeeksforGeeks",
     };
-    return exceptions[key] || key.charAt(0).toUpperCase() + key.slice(1);
+    return exceptions[key] || key[0].toUpperCase() + key.slice(1);
 };
 
 export const POPULAR_PLATFORMS = [
