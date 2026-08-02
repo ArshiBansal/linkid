@@ -44,6 +44,11 @@ export default async function PlatformRedirect({
     const resolved = await resolveUserByUsername(username);
     if (!resolved) notFound();
 
+    // Enforce the schedule window here too — the profile list hides links
+    // outside their window, but the direct redirect route must not resolve,
+    // track, or 302 to a not-yet-active or already-expired link.
+    const now = new Date();
+
     const link = await prisma.link.findFirst({
         where: {
             userId: resolved.user.id,
@@ -51,7 +56,11 @@ export default async function PlatformRedirect({
             OR: [
                 { alias: normalizedPlatform },
                 { platform: normalizedPlatform, alias: null }
-            ]
+            ],
+            AND: [
+                { OR: [{ startDate: null }, { startDate: { lte: now } }] },
+                { OR: [{ endDate: null }, { endDate: { gte: now } }] },
+            ],
         },
         select: { id: true, url: true, userId: true, platform: true },
     });
