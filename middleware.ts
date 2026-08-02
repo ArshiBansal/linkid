@@ -20,8 +20,15 @@ export async function middleware(req: NextRequest) {
 
     const host = req.headers.get("host");
     const isLocal = host?.includes("localhost") || host?.includes("127.0.0.1");
-    const isBaseDomain = host?.includes("linkid.qzz.io") || host?.includes(process.env.NEXT_PUBLIC_APP_URL?.replace("https://", "") || "");
-    const isCustomDomain = host && !isLocal && !isBaseDomain;
+    // Exact host match — the previous `includes(...)` collapsed to `includes("")`
+    // (always true) when NEXT_PUBLIC_APP_URL was unset, so custom domains were
+    // never detected.
+    const appHost = process.env.NEXT_PUBLIC_APP_URL
+        ?.replace(/^https?:\/\//, "")
+        .replace(/\/.*$/, "");
+    const baseHosts = ["linkid.qzz.io", appHost].filter(Boolean) as string[];
+    const isBaseDomain = !!host && baseHosts.some((h) => host === h || host.endsWith(`.${h}`));
+    const isCustomDomain = !!host && !isLocal && !isBaseDomain;
 
     if (isCustomDomain) {
         // Rewrite to a special domain handler route that will fetch the user by domain
