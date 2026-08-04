@@ -12,10 +12,11 @@ import {
 } from "@/components/ui/select";
 import { getCsrfToken } from "@/lib/csrfClient";
 import toast from "react-hot-toast";
+import { PLATFORMS } from "@/lib/constants";
 
 import { validateUrl } from "@/lib/urlValidation";
 import type { Link as ProfileLink } from "@/app/[username]/types/type";
-import { formatLabel, POPULAR_PLATFORMS } from "@/lib/platformHelpers";
+import { POPULAR_PLATFORMS } from "@/lib/platformHelpers";
 
 /**
  * AddLinkBox Component
@@ -34,12 +35,15 @@ export default function AddLinkBox({
 }) {
     const [url, setUrl] = useState("");
     const [label, setLabel] = useState("");
+    const [alias, setAlias] = useState("");
     const [platform, setPlatform] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     function handleCancel() {
         setUrl("");
         setLabel("");
+        setAlias("");
         setPlatform("");
         onCancel?.();
     }
@@ -59,7 +63,7 @@ export default function AddLinkBox({
         }
 
         const finalLabel = label.trim();
-        if (platform === "website" && !finalLabel) {
+        if (platform === PLATFORMS.WEBSITE && !finalLabel) {
             return toast.error("Please enter a name for this link");
         }
 
@@ -76,6 +80,7 @@ export default function AddLinkBox({
                 body: JSON.stringify({
                     url,
                     label: finalLabel,
+                    alias,
                     platform,
                 }),
             });
@@ -91,7 +96,9 @@ export default function AddLinkBox({
 
             setUrl("");
             setLabel("");
+            setAlias("");
             setPlatform("");
+            setShowAdvanced(false);
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : "Failed to add link";
             toast.error(errorMessage);
@@ -119,7 +126,7 @@ export default function AddLinkBox({
                 placeholder={
                     !platform
                         ? "Link Display Name"
-                        : platform === "website"
+                        : platform === PLATFORMS.WEBSITE
                         ? "Link Display Name (Required)"
                         : "Link Display Name (Optional)"
                 }
@@ -132,6 +139,28 @@ export default function AddLinkBox({
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
             />
+
+            <div>
+                <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors underline"
+                >
+                    {showAdvanced ? "Hide Advanced Options" : "Show Advanced Options (Custom URL Alias)"}
+                </button>
+                {showAdvanced && (
+                    <div className="mt-3">
+                        <Input
+                            placeholder="Custom Alias (e.g. github-work)"
+                            value={alias}
+                            onChange={(e) => setAlias(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Overrides the default route. Your link will be accessible at: /username/{alias || platform || "[alias]"}
+                        </p>
+                    </div>
+                )}
+            </div>
 
             <div className="flex gap-2">
                 <Button onClick={handleCancel} variant="outline" disabled={loading} className="flex-1">

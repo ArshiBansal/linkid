@@ -112,17 +112,11 @@ const styles = StyleSheet.create({
 function getInitials(name: string): string {
   return name
     .split(" ")
-    .map((part) => part.charAt(0).toUpperCase())
+    .map((part) => part[0].toUpperCase())
     .join("")
     .toLocaleUpperCase()
     .slice(0, 2);
 }
-
-type UserLink = {
-  id: string;
-  platform: string;
-  url: string;
-};
 
 export function generateResumePDF({
   user,
