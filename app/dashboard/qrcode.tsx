@@ -34,10 +34,10 @@ async function generateQRCode() {
 
     const qrCode = await QRCodeLib.toDataURL(url);
 
-    return {
+    return { {
       qrCode,
       user,
-    };
+    }, user };
   } catch (error) {
     console.error("QR generation failed:", error);
 

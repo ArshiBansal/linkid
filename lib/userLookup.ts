@@ -1,51 +1,104 @@
 import prisma from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
+import { Prisma, type Link } from "@prisma/client";
 
-export async function resolveUserByUsername(username: string) {
-    const exactUser = await prisma.user.findUnique({
-        where: { username },
-        include: { links: { where: { isPublic: true }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] } },
-    });
+import { nestLinks } from "./linkTree";
 
-    if (exactUser) {
-        return { user: exactUser, canonicalUsername: exactUser.username ?? username };
-    }
+// Only public profile fields — never `password`, `email`, `emailVerified`, or
+// TOTP columns. This object is cached by unstable_cache and rendered into the
+// public, unauthenticated profile tree, so credential material must not be here.
+const publicProfileSelect = {
+    id: true,
+    name: true,
+    username: true,
+    bio: true,
+    image: true,
+    theme: true,
+    themeType: true,
+    themeColor: true,
+    themeCustom: true,
+    layoutStyle: true,
+    enableEmailCapture: true,
+    seoTitle: true,
+    seoDescription: true,
+    links: {
+        where: { isPublic: true },
+        orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+    },
+} satisfies Prisma.UserSelect;
 
-    const alias = await prisma.userAlias.findUnique({
-        where: { username },
-    });
+export const resolveUserByUsername = unstable_cache(
+    async (username: string) => {
+        const exactUser = await prisma.user.findUnique({
+            where: { username },
+            select: publicProfileSelect,
+        });
 
-    if (!alias) {
-        return null;
-    }
+        if (exactUser) {
+            return { user: { ...exactUser, links: nestLinks(exactUser.links) }, canonicalUsername: exactUser.username ?? username };
+        }
 
-    const user = await prisma.user.findUnique({
-        where: { id: alias.userId },
-        include: { links: { where: { isPublic: true }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] } },
-    });
+        const alias = await prisma.userAlias.findUnique({
+            where: { username },
+        });
 
-    if (!user) {
-        return null;
-    }
+        if (!alias) {
+            return null;
+        }
 
-    return { user, canonicalUsername: user.username ?? username };
-}
+        const user = await prisma.user.findUnique({
+            where: { id: alias.userId },
+            select: publicProfileSelect,
+        });
+
+        if (!user) {
+            return null;
+        }
+
+        return { user: { ...user, links: nestLinks(user.links) }, canonicalUsername: user.username ?? username };
+    },
+    ["resolveUserByUsername"],
+    { revalidate: 60, tags: ["public-profile"] }
+);
 
 /**
  * Get public user data including resume URL
  */
-export async function getPublicUserData(username: string) {
-    const user = await prisma.user.findUnique({
-        where: { username },
-        select: {
-            id: true,
-            name: true,
-            username: true,
-            bio: true,
-            image: true,
-            resumeUrl: true,
-        },
-    });
+export const getPublicUserData = unstable_cache(
+    async (username: string) => {
+        const user = await prisma.user.findUnique({
+            where: { username },
+            select: {
+                id: true,
+                name: true,
+                username: true,
+                bio: true,
+                image: true,
+                resumeUrl: true,
+            },
+        });
 
-    return user;
-}
+        return user;
+    },
+    ["getPublicUserData"],
+    { revalidate: 60, tags: ["public-profile"] }
+);
 
+/**
+ * Get all users with a published (public) profile, for sitemap generation.
+ * A profile is considered "published" once the user has claimed a username.
+ */
+export const getPublishedUsernames = unstable_cache(
+    async () => {
+        const users = await prisma.user.findMany({
+            where: { username: { not: null } },
+            select: { username: true, createdAt: true },
+        });
+
+        return users.filter(
+            (u): u is { username: string; createdAt: Date } => u.username !== null
+        );
+    },
+    ["getPublishedUsernames"],
+    { revalidate: 3600, tags: ["public-profile"] }
+);
