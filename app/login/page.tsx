@@ -10,6 +10,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { PLATFORMS } from "@/lib/constants";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -75,12 +76,12 @@ export default function LoginPage() {
           <div className="space-y-2">
             <Button
               variant="outline"
-              className="flex w-full items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 cursor-pointer"
               disabled={googleLoading || githubLoading}
               onClick={async () => {
                 setGoogleLoading(true);
                 try {
-                  await signIn("google", {
+                  await signIn(PLATFORMS.GOOGLE, {
                     callbackUrl: "/dashboard",
                   });
                 } finally {
@@ -98,12 +99,12 @@ export default function LoginPage() {
 
             <Button
               variant="outline"
-              className="flex w-full items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 cursor-pointer"
               disabled={googleLoading || githubLoading}
               onClick={async () => {
                 setGithubLoading(true);
                 try {
-                  await signIn("github", {
+                  await signIn(PLATFORMS.GITHUB, {
                     callbackUrl: "/dashboard",
                   });
                 } finally {

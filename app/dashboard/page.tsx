@@ -5,6 +5,9 @@ import prisma from "@/lib/prisma";
 import DashboardClient from "./DashboardClient";
 import CreateLinkId from "./CreateLinkId";
 import QRCode from "./qrcode";
+import type { Link } from "@prisma/client";
+
+import { nestLinks } from "@/lib/linkTree";
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
@@ -12,16 +15,27 @@ export default async function DashboardPage() {
 
     const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        include: { links: { orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] } },
+        include: { 
+            links: { orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] },
+            subscribers: { orderBy: { createdAt: 'desc' } }
+        },
     });
 
     if (!user?.username) return <CreateLinkId />;
 
+    const nestedLinks = nestLinks(user.links);
+
     return (
         <DashboardClient
             username={user.username}
-            initialLinks={user.links}
+            initialLinks={nestedLinks}
+            initialTheme={user.theme}
+            initialLayout={user.layoutStyle}
+            initialSeoTitle={user.seoTitle || ""}
+            initialSeoDescription={user.seoDescription || ""}
             qrCode={<QRCode />} 
+            enableEmailCapture={user.enableEmailCapture}
+            subscribers={user.subscribers}
         />
     );
 }

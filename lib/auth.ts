@@ -7,9 +7,10 @@ import type { NextAuthOptions } from "next-auth";
 
 import prisma from "@/lib/prisma";
 import { isUserSessionInvalidated } from "@/lib/sessionInvalidation";
+import { PLATFORMS } from "@/lib/constants";
 
 
-const oauthProviders = new Set(["google", "github"]);
+const oauthProviders = new Set<string>([PLATFORMS.GITHUB, PLATFORMS.GOOGLE]);
 
 function getOAuthProfileImage(profile: unknown): string | null {
     if (!profile || typeof profile !== "object") return null;
@@ -40,6 +41,7 @@ export const authOptions: NextAuthOptions = {
                   Google({
                       clientId: process.env.GOOGLE_CLIENT_ID,
                       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+                      allowDangerousEmailAccountLinking: true,
                   }),
               ]
             : []),
@@ -49,6 +51,7 @@ export const authOptions: NextAuthOptions = {
                   GitHub({
                       clientId: process.env.GITHUB_CLIENT_ID,
                       clientSecret: process.env.GITHUB_CLIENT_SECRET,
+                      allowDangerousEmailAccountLinking: true,
                   }),
               ]
             : []),
@@ -68,6 +71,10 @@ export const authOptions: NextAuthOptions = {
                 });
 
                 if (!user || !user.password) return null;
+
+                if (!user.emailVerified) {
+                    throw new Error("Please verify your email address to log in.");
+                }
 
                 const isValid = await bcrypt.compare(
                     credentials.password,
@@ -132,18 +139,23 @@ events: {
                     }
                 }
             }
+
             if (!token.image && user && "image" in user && user.image) {
                 token.image = user.image;
                 return token;
             }
 
-            if (!token.image && token.email) {
-                const user = await prisma.user.findUnique({
+            // Only query DB for image on the very first sign-in (token.image === undefined).
+            // On subsequent requests token.image is explicitly set to null for users without
+            // an image, preventing a redundant DB hit on every authenticated request.
+            if (token.image === undefined && token.email) {
+                const dbUser = await prisma.user.findUnique({
                     where: { email: token.email },
                     select: { image: true },
                 });
-                token.image = user?.image ?? null;
+                token.image = dbUser?.image ?? null;
             }
+
             return token;
         },
         async session({ session, token }) {
