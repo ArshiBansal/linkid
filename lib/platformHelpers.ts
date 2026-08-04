@@ -1,4 +1,5 @@
 import { PLATFORM_ICONS } from "@/lib/platformIcons";
+import { PLATFORMS } from "@/lib/constants";
 
 export const formatLabel = (key: string) => {
     const exceptions: Record<string, string> = {
@@ -10,14 +11,15 @@ export const formatLabel = (key: string) => {
         devto: "Dev.to",
         codeforces: "Codeforces",
         codechef: "CodeChef",
-
+        kaggle: "Kaggle",
+        geeksforgeeks: "GeeksforGeeks",
     };
-    return exceptions[key] || key.charAt(0).toUpperCase() + key.slice(1);
+    return exceptions[key] || key[0].toUpperCase() + key.slice(1);
 };
 
 export const POPULAR_PLATFORMS = [
     ...Object.keys(PLATFORM_ICONS)
-        .filter((key) => key !== "website" && key !== "portfolio")
+        .filter((key) => key !== PLATFORMS.WEBSITE && key !== "portfolio")
         .map((key) => ({ value: key, label: formatLabel(key) })),
-    { value: "website", label: "Personal Website / Other" },
+    { value: PLATFORMS.WEBSITE, label: "Personal Website / Other" },
 ];

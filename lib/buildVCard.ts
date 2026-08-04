@@ -4,7 +4,7 @@ export function buildVCard({
   user,
   links,
 }: {
-  user: PrismaUser;
+  user: Pick<PrismaUser, "name" | "username" | "email" | "bio" | "image">;
   links: PrismaLink[];
 }): string {
   const CRLF = "\r\n";

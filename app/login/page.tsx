@@ -10,6 +10,7 @@ import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { PLATFORMS } from "@/lib/constants";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -47,7 +48,7 @@ export default function LoginPage() {
       if (response?.url) {
         window.location.href = response.url;
       }
-    } catch (err) {
+    } catch {
       setError("Login failed. Please try again.");
     } finally {
       setLoading(false);
@@ -75,12 +76,12 @@ export default function LoginPage() {
           <div className="space-y-2">
             <Button
               variant="outline"
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 cursor-pointer"
               disabled={googleLoading || githubLoading}
               onClick={async () => {
                 setGoogleLoading(true);
                 try {
-                  await signIn("google", { callbackUrl: "/dashboard" });
+                  await signIn(PLATFORMS.GOOGLE, { callbackUrl: "/dashboard" });
                 } finally {
                   setGoogleLoading(false);
                 }
@@ -92,12 +93,12 @@ export default function LoginPage() {
 
             <Button
               variant="outline"
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2 cursor-pointer"
               disabled={googleLoading || githubLoading}
               onClick={async () => {
                 setGithubLoading(true);
                 try {
-                  await signIn("github", { callbackUrl: "/dashboard" });
+                  await signIn(PLATFORMS.GITHUB, { callbackUrl: "/dashboard" });
                 } finally {
                   setGithubLoading(false);
                 }

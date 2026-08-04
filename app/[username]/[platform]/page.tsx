@@ -8,6 +8,7 @@ import { trackLinkClick } from "@/lib/analytics";
 import { resolveUserByUsername } from "@/lib/userLookup";
 // ✨ Fixed: Correct module reference target mapping
 import { getMobileOS, getDeepLink } from "@/lib/deeplink";
+import { isSafeRedirectUrl } from "@/lib/urlValidation";
 
 // ✨ Platform package registry mapping fallback for Android Intents
 const ANDROID_PACKAGES: Record<string, string> = {
@@ -43,18 +44,39 @@ export default async function PlatformRedirect({
     const resolved = await resolveUserByUsername(username);
     if (!resolved) notFound();
 
+    // Enforce the schedule window here too — the profile list hides links
+    // outside their window, but the direct redirect route must not resolve,
+    // track, or 302 to a not-yet-active or already-expired link.
+    const now = new Date();
+
     const link = await prisma.link.findFirst({
         where: {
-            platform: normalizedPlatform, // Pass lowercased string safely
             userId: resolved.user.id,
             isPublic: true,
+            OR: [
+                { alias: normalizedPlatform },
+                { platform: normalizedPlatform, alias: null }
+            ],
+            AND: [
+                { OR: [{ startDate: null }, { startDate: { lte: now } }] },
+                { OR: [{ endDate: null }, { endDate: { gte: now } }] },
+            ],
         },
-        select: { id: true, url: true, userId: true },
+        select: { id: true, url: true, userId: true, platform: true },
     });
 
     if (!link) notFound();
 
-    // Track analytics asynchronously safely 
+    // Revalidate the redirect target's scheme even though it was already
+    // checked when the link was created or updated. `link.url` below is
+    // rendered into a `<meta http-equiv="refresh">` tag, an inline script,
+    // an `<a href>`, and passed to `redirect()` — a `javascript:`, `data:`,
+    // or otherwise non-http(s) value must never reach any of those sinks.
+    if (!isSafeRedirectUrl(link.url)) {
+        notFound();
+    }
+
+    // Track analytics asynchronously safely
     await trackLinkClick({
         linkId: link.id,
         userId: link.userId,
@@ -67,7 +89,8 @@ export default async function PlatformRedirect({
     const webUrl = link.url;
 
     if (os !== "unknown") {
-        const deepLinks = getDeepLink(normalizedPlatform, webUrl);
+        const actualPlatform = link.platform;
+        const deepLinks = getDeepLink(actualPlatform, webUrl);
         let appUrl = os === "android" ? deepLinks.android : deepLinks.ios;
 
         if (appUrl) {
@@ -76,7 +99,7 @@ export default async function PlatformRedirect({
             
             if (os === "android" && isInApp) {
                 const cleanUrl = webUrl.replace(/^https?:\/\//, "");
-                const targetPackage = ANDROID_PACKAGES[normalizedPlatform];
+                const targetPackage = ANDROID_PACKAGES[actualPlatform];
                 
                 // ✨ Fixed: Safe registry mapping check to skip wrong fake package layouts
                 if (targetPackage) {
@@ -123,7 +146,7 @@ export default async function PlatformRedirect({
                             `,
                         }}
                     />
-                    <p>Opening {platform} app...</p>
+                    <p>Opening {actualPlatform} app...</p>
                     <a href={webUrl}>Open in browser instead</a>
                 </div>
             );
