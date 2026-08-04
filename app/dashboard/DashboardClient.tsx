@@ -7,25 +7,79 @@ import { LinksSection } from "./LinksSection";
 import type { Link as ProfileLink } from "@/app/[username]/types/type";
 import { LinkIdCard } from "./LinkIdCard";
 import { AnalyticsOverview } from "./AnalyticsOverview";
+import { VersionHistory } from "@/components/dashboard/VersionHistory";
+import { AppearanceSection } from "./AppearanceSection";
+import { SeoSection } from "./SeoSection";
+import { LayoutStyle } from "@/app/[username]/types/type";
 
 export default function DashboardClient({
     username,
     initialLinks,
+    initialTheme,
+    initialSeoTitle,
+    initialSeoDescription,
+    initialLayout,
     qrCode,
+    enableEmailCapture,
+    subscribers = [],
 }: {
     username: string;
     initialLinks: ProfileLink[];
+    initialTheme?: string;
+    initialSeoTitle?: string;
+    initialSeoDescription?: string;
+    initialLayout?: LayoutStyle;
     qrCode?: React.ReactNode;
+    enableEmailCapture?: boolean;
+    subscribers?: { id: string; email: string; createdAt: Date }[];
 }) {
     const [links, setLinks] = useState(initialLinks);
+    const [theme, setTheme] = useState(initialTheme || "default");
+    const [layoutStyle, setLayoutStyle] = useState<LayoutStyle>(initialLayout || "LIST");
+    const [seoTitle, setSeoTitle] = useState(initialSeoTitle || "");
+    const [seoDescription, setSeoDescription] = useState(initialSeoDescription || "");
+    const [activeTab, setActiveTab] = useState<"links" | "appearance" | "seo">("links");
     const [showAdd, setShowAdd] = useState(false);
+    const [showGroupAdd, setShowGroupAdd] = useState(false);
+    const [isEmailCaptureEnabled, setIsEmailCaptureEnabled] = useState(enableEmailCapture ?? false);
+    const [isPendingEmailCapture, setIsPendingEmailCapture] = useState(false);
+
+    async function toggleEmailCapture() {
+        if (isPendingEmailCapture) return;
+        const newValue = !isEmailCaptureEnabled;
+        setIsPendingEmailCapture(true);
+        try {
+            const csrfToken = await getCsrfToken();
+            const response = await fetch('/api/settings', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-csrf-token': csrfToken,
+                },
+                body: JSON.stringify({ enableEmailCapture: newValue }),
+            });
+            if (!response.ok) throw new Error();
+            const data = await response.json();
+            setIsEmailCaptureEnabled(data.enableEmailCapture);
+            toast.success(data.enableEmailCapture ? "Email capture enabled" : "Email capture disabled");
+        } catch {
+            toast.error("Failed to update email capture settings");
+        } finally {
+            setIsPendingEmailCapture(false);
+        }
+    }
 
     async function addLink(link: ProfileLink) {
         setLinks((prev) => [...prev, link]);
         setShowAdd(false);
     }
 
-    async function updateLink(id: string, url: string, label?: string, platform?: string): Promise<boolean> {
+    async function addGroup(group: ProfileLink) {
+        setLinks((prev) => [...prev, { ...group, children: group.children || [] }]);
+        setShowGroupAdd(false);
+    }
+
+    async function updateLink(id: string, url: string, label?: string, platform?: string, startDate?: Date | null, endDate?: Date | null): Promise<boolean> {
         const csrfToken = await getCsrfToken();
 
         try {
@@ -35,7 +89,7 @@ export default function DashboardClient({
                     "Content-Type": "application/json",
                     "x-csrf-token": csrfToken,
                 },
-                body: JSON.stringify({ url, label, platform }),
+                body: JSON.stringify({ url, label, platform, startDate, endDate }),
             });
 
             if (!response.ok) {
@@ -51,10 +105,20 @@ export default function DashboardClient({
             const responseData = await response.json();
             toast.success("Link updated");
 
+            // Update link in nested structure
             setLinks((prev) =>
-                prev.map((l) =>
-                    l.id === id ? { ...l, ...responseData.link } : l
-                )
+                prev.map((l) => {
+                    if (l.id === id) return { ...l, ...responseData.link };
+                    if (l.isGroup && l.children) {
+                        return {
+                            ...l,
+                            children: l.children.map((c) =>
+                                c.id === id ? { ...c, ...responseData.link } : c
+                            ),
+                        };
+                    }
+                    return l;
+                })
             );
             return true;
         } catch (error) {
@@ -84,9 +148,18 @@ export default function DashboardClient({
         toast.success(isPublic ? "Link set to public" : "Link set to private");
 
         setLinks((prev) =>
-            prev.map((l) =>
-                l.id === id ? { ...l, isPublic } : l
-            )
+            prev.map((l) => {
+                if (l.id === id) return { ...l, isPublic };
+                if (l.isGroup && l.children) {
+                    return {
+                        ...l,
+                        children: l.children.map((c) =>
+                            c.id === id ? { ...c, isPublic } : c
+                        ),
+                    };
+                }
+                return l;
+            })
         );
     }
 
@@ -107,6 +180,23 @@ export default function DashboardClient({
         window.URL.revokeObjectURL(url);
     }
 
+    async function exportSubscribersCsv() {
+        try {
+            const response = await fetch("/api/subscribers/export");
+            if (!response.ok) throw new Error();
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `linkid-subscribers-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch {
+            toast.error("Unable to export subscribers");
+        }
+    }
+
     async function deleteLink(id: string) {
         if (!confirm("Delete this link?")) return;
 
@@ -119,7 +209,80 @@ export default function DashboardClient({
             method: "DELETE",
         });
         toast.success("Link deleted");
-        setLinks((prev) => prev.filter((l) => l.id !== id));
+
+        // Remove from nested structure
+        setLinks((prev) =>
+            prev
+                .filter((l) => l.id !== id)
+                .map((l) => {
+                    if (l.isGroup && l.children) {
+                        return { ...l, children: l.children.filter((c) => c.id !== id) };
+                    }
+                    return l;
+                })
+        );
+    }
+
+    async function deleteGroup(groupId: string, deleteChildren: boolean) {
+        const csrfToken = await getCsrfToken();
+
+        const res = await fetch(`/api/links/${groupId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                "x-csrf-token": csrfToken,
+            },
+            body: JSON.stringify({ deleteChildren }),
+        });
+
+        if (!res.ok) {
+            toast.error("Failed to delete group");
+            return;
+        }
+
+        if (deleteChildren) {
+            toast.success("Group and links deleted");
+            setLinks((prev) => prev.filter((l) => l.id !== groupId));
+        } else {
+            toast.success("Group removed, links ungrouped");
+            setLinks((prev) => {
+                const group = prev.find((l) => l.id === groupId);
+                const ungroupedChildren = (group?.children || []).map((c) => ({
+                    ...c,
+                    parentId: null,
+                }));
+                const withoutGroup = prev.filter((l) => l.id !== groupId);
+                // Insert ungrouped children at the position where the group was
+                const groupIndex = prev.findIndex((l) => l.id === groupId);
+                withoutGroup.splice(groupIndex, 0, ...ungroupedChildren);
+                return withoutGroup;
+            });
+        }
+    }
+
+    async function renameGroup(groupId: string, newName: string) {
+        const csrfToken = await getCsrfToken();
+
+        const res = await fetch(`/api/links/${groupId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "x-csrf-token": csrfToken,
+            },
+            body: JSON.stringify({ label: newName }),
+        });
+
+        if (!res.ok) {
+            toast.error("Failed to rename group");
+            return;
+        }
+
+        toast.success("Group renamed");
+        setLinks((prev) =>
+            prev.map((l) =>
+                l.id === groupId ? { ...l, label: newName } : l
+            )
+        );
     }
 
     return (
@@ -137,20 +300,118 @@ export default function DashboardClient({
 
                 <LinkIdCard username={username} qrCode={qrCode} />
 
-                <AnalyticsOverview />
+                <div className="grid gap-6 md:grid-cols-3">
+                    <div className="md:col-span-2">
+                        <AnalyticsOverview />
+                    </div>
+                    <div>
+                        <VersionHistory />
+                    </div>
+                </div>
 
-                <LinksSection
-                    username={username}
-                    links={links}
-                    showAdd={showAdd}
-                    setShowAdd={setShowAdd}
-                    onExport={exportCsv}
-                    onAdd={addLink}
-                    onUpdate={updateLink}
-                    onToggleVisibility={updateVisibility}
-                    onDelete={deleteLink}
-                    onReorder={setLinks}
-                />
+                <div className="flex gap-4 border-b">
+                    <button 
+                        className={`pb-2 px-1 text-sm font-medium ${activeTab === 'links' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => setActiveTab('links')}
+                    >
+                        Links
+                    </button>
+                    <button 
+                        className={`pb-2 px-1 text-sm font-medium ${activeTab === 'appearance' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => setActiveTab('appearance')}
+                    >
+                        Appearance
+                    </button>
+                    <button 
+                        className={`pb-2 px-1 text-sm font-medium ${activeTab === 'seo' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => setActiveTab('seo')}
+                    >
+                        SEO
+                    </button>
+                </div>
+
+                {activeTab === 'links' ? (
+                    <div className="space-y-6">
+                        <section className="bg-card p-6 rounded-xl border shadow-sm">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-xl font-bold">Email Subscribers</h2>
+                                    <p className="text-sm text-muted-foreground">Collect emails directly from your LinkID page.</p>
+                                </div>
+                                <label className={`flex items-center cursor-pointer ${isPendingEmailCapture ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    <div className="relative">
+                                        <input type="checkbox" className="sr-only" checked={isEmailCaptureEnabled} onChange={toggleEmailCapture} disabled={isPendingEmailCapture} />
+                                        <div className={`block w-14 h-8 rounded-full ${isEmailCaptureEnabled ? 'bg-primary' : 'bg-muted'}`}></div>
+                                        <div className={`dot absolute left-1 top-1 bg-background w-6 h-6 rounded-full transition ${isEmailCaptureEnabled ? 'transform translate-x-6' : ''}`}></div>
+                                    </div>
+                                </label>
+                            </div>
+                            {isEmailCaptureEnabled && (
+                                <div className="mt-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <p className="text-sm font-medium">Total Subscribers: {subscribers.length}</p>
+                                        {subscribers.length > 0 && (
+                                            <button 
+                                                onClick={exportSubscribersCsv}
+                                                className="text-xs font-medium px-3 py-1.5 bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
+                                            >
+                                                Export CSV
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="max-h-40 overflow-y-auto border rounded-md">
+                                        {subscribers.length === 0 ? (
+                                            <p className="p-4 text-sm text-muted-foreground">No subscribers yet.</p>
+                                        ) : (
+                                            <ul className="divide-y text-sm">
+                                                {subscribers.map(sub => (
+                                                    <li key={sub.id} className="p-2 px-4 flex justify-between">
+                                                        <span>{sub.email}</span>
+                                                        <span className="text-muted-foreground">{new Date(sub.createdAt).toLocaleDateString("en-US", { timeZone: "UTC" })}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </section>
+
+                        <LinksSection
+                            username={username}
+                            links={links}
+                            showAdd={showAdd}
+                            setShowAdd={setShowAdd}
+                            showGroupAdd={showGroupAdd}
+                            setShowGroupAdd={setShowGroupAdd}
+                            onExport={exportCsv}
+                            onAdd={addLink}
+                            onAddGroup={addGroup}
+                            onUpdate={updateLink}
+                            onToggleVisibility={updateVisibility}
+                            onDelete={deleteLink}
+                            onDeleteGroup={deleteGroup}
+                            onRenameGroup={renameGroup}
+                            onReorder={setLinks}
+                        />
+                    </div>
+                ) : activeTab === 'appearance' ? (
+                    <AppearanceSection 
+                        initialTheme={theme} 
+                        initialLayout={layoutStyle}
+                        onUpdateTheme={setTheme} 
+                        onUpdateLayout={setLayoutStyle}
+                    />
+                ) : (
+                    <SeoSection 
+                        initialTitle={seoTitle}
+                        initialDescription={seoDescription}
+                        onUpdateSeo={(title, desc) => {
+                            setSeoTitle(title);
+                            setSeoDescription(desc);
+                        }}
+                    />
+                )}
 
                 <footer className="pt-10 border-t text-center text-sm text-muted-foreground">
                     © {new Date().getFullYear()} LinkID · Built for developers

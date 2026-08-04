@@ -1,5 +1,7 @@
 // Lib/platforms.ts
 
+import { PLATFORMS } from "@/lib/constants";
+
 export type Platform =
     | "github"
     | "linkedin"
@@ -16,6 +18,8 @@ export type Platform =
     | "dribbble"
     | "codeforces"
     | "codechef"
+    | "kaggle"
+    | "geeksforgeeks"
     | "website";
 
 
@@ -29,7 +33,7 @@ const PLATFORM_PATTERNS: Record<Platform, RegExp> = {
     linkedin: /^https?:\/\/(www\.)?linkedin\.com\/.*$/i,
 
     leetcode: /^https?:\/\/(www\.)?leetcode\.com\/(u\/)?[A-Za-z0-9_-]+\/?(\?.*)?$/i,
-    youtube: /^https?:\/\/(www\.)?(youtube\.com\/(@[A-Za-z0-9_.-]+|channel\/[A-Za-z0-9_-]+|c\/[A-Za-z0-9_-]+|shorts\/[A-Za-z0-9_-]+|watch|playlist)|youtu\.be\/[A-Za-z0-9_-]+\/?)\/?(\?.*)?$/i,
+    youtube: /^https?:\/\/(www\.)?(youtube\.com\/(@[A-Za-z0-9_.-]+|channel\/[A-Za-z0-9_-]+|c\/[A-Za-z0-9_.-]+|shorts\/[A-Za-z0-9_-]+|watch|playlist)|youtu\.be\/[A-Za-z0-9_-]+\/?)\/?(\?.*)?$/i,
     x: /^https?:\/\/(www\.)?(x|twitter)\.com\/[A-Za-z0-9_]{1,15}\/?(\?.*)?$/i,
 
     // Generic domain catching ensures subpaths like /groups or /marketplace map to Facebook before validation.
@@ -44,14 +48,16 @@ const PLATFORM_PATTERNS: Record<Platform, RegExp> = {
     dribbble: /^https?:\/\/(www\.)?dribbble\.com\/[A-Za-z0-9_-]+\/?(\?.*)?$/i,
     codechef: /^https?:\/\/(www\.)?codechef\.com\/users\/[A-Za-z0-9_.-]+\/?(\?.*)?$/i,
     codeforces: /^https?:\/\/(www\.)?codeforces\.com\/profile\/[A-Za-z0-9_.-]+\/?(\?.*)?$/i,
+    kaggle: /^https?:\/\/(www\.)?kaggle\.com\/[A-Za-z0-9_.-]+\/?(\?.*)?$/i,
+    geeksforgeeks: /^https?:\/\/(www\.|auth\.)?geeksforgeeks\.org\/user\/[A-Za-z0-9_.-]+\/?(\?.*)?$/i,
     website: /^https?:\/\/.+/i,
 };
 
 // ─── Platform Blocklists ─────────────────────────────────────────────────────
 // Defence-in-depth: catches internal app views even if the main pattern is ever loosened.
 const PLATFORM_BLOCKLIST: Partial<Record<Platform, RegExp>> = {
-    linkedin: /\/(messaging|feed|jobs|notifications|search)\b/i,
-    facebook: /\/(messaging|feed|groups|events|marketplace)\b/i,
+    linkedin: /\/(messaging|feed|jobs|notifications|search|mynetwork|learning)\b/i,
+    facebook: /\/(messaging|messages|feed|groups|events|marketplace|gaming|watch)\b/i,
     youtube: /\/results\b/i,
     instagram: /\/(explore|stories)\b/i,
 };
@@ -87,11 +93,11 @@ export function detectPlatform(url: string): Platform {
     const normalized = normalizeUrl(url);
 
     for (const [platform, regex] of Object.entries(PLATFORM_PATTERNS) as [Platform, RegExp][]) {
-        if (platform === "website") continue;
+        if (platform === PLATFORMS.WEBSITE) continue;
         if (regex.test(normalized)) return platform;
     }
 
-    return "website";
+    return PLATFORMS.WEBSITE;
 }
 
 export function isKnownPlatform(p: string): p is Platform {
@@ -109,6 +115,19 @@ export function validatePlatformUrl(
 
     const pattern = PLATFORM_PATTERNS[targetPlatform];
     if (!pattern || !pattern.test(normalized)) return false;
+
+    if (targetPlatform === PLATFORMS.FACEBOOK) {
+        try {
+            const parsed = new URL(normalized);
+            if (parsed.pathname === "/profile.php") {
+                if (!parsed.searchParams.has("id")) {
+                    return false;
+                }
+            }
+        } catch {
+            return false;
+        }
+    }
 
     const blocklist = PLATFORM_BLOCKLIST[targetPlatform];
     if (blocklist?.test(normalized)) return false;
